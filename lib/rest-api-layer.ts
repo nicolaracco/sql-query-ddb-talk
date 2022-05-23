@@ -13,8 +13,8 @@ import { QueryShowFunction } from './query-show-function';
 export interface RESTAPILayerProps {
   glueDatabase: glue.IDatabase;
   bucket: s3.IBucket;
-  rawObjectsPrefix: string;
-  table: dynamodb.ITable;
+  dataObjectsPrefix: string;
+  ddbTable: dynamodb.ITable;
   logRetention: logs.RetentionDays;
 }
 
@@ -27,14 +27,14 @@ export class RESTAPILayer extends apigateway.RestApi {
       },
     });
 
-    const { table, logRetention } = props;
+    const { ddbTable, logRetention } = props;
 
     const apiLoans = this.root.addResource('loans');
     apiLoans.addMethod(
       'GET',
       new DDBAccessorFunction(this, 'ListLoan', {
         entry: 'lambda/loans/list.rest.handler.ts',
-        table,
+        table: ddbTable,
         logRetention,
       }).apigwIntegration(),
     );
@@ -42,7 +42,7 @@ export class RESTAPILayer extends apigateway.RestApi {
       'POST',
       new DDBAccessorFunction(this, 'CreateLoan', {
         entry: 'lambda/loans/create.rest.handler.ts',
-        table,
+        table: ddbTable,
         logRetention,
       }).apigwIntegration(),
     );
@@ -52,7 +52,7 @@ export class RESTAPILayer extends apigateway.RestApi {
       'GET',
       new DDBAccessorFunction(this, 'ShowLoan', {
         entry: 'lambda/loans/show.rest.handler.ts',
-        table,
+        table: ddbTable,
         logRetention,
       }).apigwIntegration(),
     );
@@ -60,7 +60,7 @@ export class RESTAPILayer extends apigateway.RestApi {
       'DELETE',
       new DDBAccessorFunction(this, 'DeleteLoan', {
         entry: 'lambda/loans/delete.rest.handler.ts',
-        table,
+        table: ddbTable,
         logRetention,
       }).apigwIntegration(),
     );
@@ -68,7 +68,7 @@ export class RESTAPILayer extends apigateway.RestApi {
       'POST',
       new DDBAccessorFunction(this, 'CreateVariant', {
         entry: 'lambda/loan_variants/create.rest.handler.ts',
-        table,
+        table: ddbTable,
         logRetention,
       }).apigwIntegration(),
     );
@@ -78,7 +78,7 @@ export class RESTAPILayer extends apigateway.RestApi {
       'DELETE',
       new DDBAccessorFunction(this, 'DeleteVariant', {
         entry: 'lambda/loan_variants/delete.rest.handler.ts',
-        table,
+        table: ddbTable,
         logRetention,
       }).apigwIntegration(),
     );
@@ -88,7 +88,7 @@ export class RESTAPILayer extends apigateway.RestApi {
       'GET',
       new DDBAccessorFunction(this, 'ListRates', {
         entry: 'lambda/rates/list.rest.handler.ts',
-        table,
+        table: ddbTable,
         logRetention,
       }).apigwIntegration(),
     );
@@ -96,7 +96,7 @@ export class RESTAPILayer extends apigateway.RestApi {
       'POST',
       new DDBAccessorFunction(this, 'UpsertRate', {
         entry: 'lambda/rates/upsert.rest.handler.ts',
-        table,
+        table: ddbTable,
         logRetention,
       }).apigwIntegration(),
     );
@@ -120,7 +120,7 @@ export class RESTAPILayer extends apigateway.RestApi {
         database: props.glueDatabase,
         workgroupName,
         resultsBucket: props.bucket,
-        rawObjectsPrefix: props.rawObjectsPrefix,
+        dataObjectsPrefix: props.dataObjectsPrefix,
         queryObjectsPrefix: queriesPrefix,
         logRetention,
       }).apigwIntegration(),

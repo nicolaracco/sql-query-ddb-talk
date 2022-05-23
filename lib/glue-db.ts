@@ -10,6 +10,9 @@ export interface GlueDBProps {
 
 export class GlueDB extends Construct {
   readonly database: glue.Database;
+  readonly ratesTable: glue.Table;
+  readonly loansTable: glue.Table;
+  readonly loanVariantsTable: glue.Table;
 
   constructor(scope: Construct, id: string, props: GlueDBProps) {
     super(scope, id);
@@ -18,7 +21,7 @@ export class GlueDB extends Construct {
       databaseName: Stack.of(this).stackName.toLowerCase(),
     });
 
-    new glue.Table(this, 'Rates', {
+    this.ratesTable = new glue.Table(this, 'Rates', {
       database: this.database,
       bucket: props.bucket,
       dataFormat: glue.DataFormat.JSON,
@@ -36,7 +39,7 @@ export class GlueDB extends Construct {
       ],
     });
 
-    new glue.Table(this, 'Loans', {
+    this.loansTable = new glue.Table(this, 'Loans', {
       database: this.database,
       bucket: props.bucket,
       dataFormat: glue.DataFormat.JSON,
@@ -62,7 +65,7 @@ export class GlueDB extends Construct {
       ],
     });
 
-    new glue.Table(this, 'LoanVariants', {
+    this.loanVariantsTable = new glue.Table(this, 'LoanVariants', {
       database: this.database,
       bucket: props.bucket,
       dataFormat: glue.DataFormat.JSON,

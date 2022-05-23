@@ -12,7 +12,7 @@ export interface QueryStartFunctionProps {
   workgroupName: string;
   database: glue.IDatabase;
   resultsBucket: s3.IBucket;
-  rawObjectsPrefix: string;
+  dataObjectsPrefix: string;
   queryObjectsPrefix: string;
   logRetention?: logs.RetentionDays;
 }
@@ -27,7 +27,7 @@ export class QueryStartFunction extends lambdaNode.NodejsFunction {
         DATABASE_NAME: props.database.databaseName,
       },
     });
-    props.resultsBucket.grantRead(this, `${props.rawObjectsPrefix}*`);
+    props.resultsBucket.grantRead(this, `${props.dataObjectsPrefix}*`);
     props.resultsBucket.grantReadWrite(this, `${props.queryObjectsPrefix}*`);
     this.addToRolePolicy(
       new iam.PolicyStatement({
@@ -55,14 +55,14 @@ export class QueryStartFunction extends lambdaNode.NodejsFunction {
     const preparedStatementName = scope.node.addr;
     new athena.CfnPreparedStatement(this, 'PreparedStatement', {
       queryStatement: `
-      SELECT l.name, ROUND(r.value + lv.spread, 2) AS rate FROM loans l
+      SELECT l.name, ROUND(r.value + lv.spread, 2) AS rate FROM refined_loans l
       INNER JOIN (
-        SELECT loanId, MIN(lv.spread) AS spread FROM loan_variants lv
+        SELECT loanId, MIN(lv.spread) AS spread FROM refined_loan_variants lv
           WHERE lv.duration.min <= ? AND lv.duration.max >= ?
             AND lv.ltv.min <= ? AND lv.ltv.max >= ?
           GROUP BY lv.loanId
       ) AS lv ON l.id = lv.loanId
-      INNER JOIN rates r ON l.rate = r.id
+      INNER JOIN refined_rates r ON l.rate = r.id
       WHERE l.type = ?
       `,
       statementName: preparedStatementName,
