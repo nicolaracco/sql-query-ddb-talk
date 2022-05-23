@@ -7,6 +7,7 @@ import { DDBAccessorFunction } from './ddb-accessor-function';
 import { LambdaDDBEventSource } from './lambda-ddb-event-source';
 import { DDBToS3 } from './ddb-to-s3';
 import { RESTAPILayer } from './rest-api-layer';
+import { GlueDB } from './glue-db';
 
 export class LoansFinderStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
@@ -39,10 +40,15 @@ export class LoansFinderStack extends Stack {
       },
     });
 
-    new DDBToS3(this, 'DDBToS3', {
+    const { bucket, rawObjectsPrefix } = new DDBToS3(this, 'DDBToS3', {
       table,
       conversionLambdaEntry: 'lambda/ddb-to-s3/ddb-stream.handler.ts',
       entities: ['loan', 'loan_variant', 'rate'],
+      removalPolicy,
+    });
+    new GlueDB(this, 'DB', {
+      bucket,
+      rawObjectsPrefix,
     });
 
     const variantRemover = new DDBAccessorFunction(this, 'LoanVariantRemover', {
