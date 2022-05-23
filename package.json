@@ -33,6 +33,7 @@
   },
   "dependencies": {
     "@aws-cdk/aws-glue-alpha": "^2.25.0-alpha.0",
+    "@aws-sdk/client-athena": "^3.95.0",
     "@aws-sdk/client-dynamodb": "^3.95.0",
     "@aws-sdk/client-s3": "^3.95.0",
     "@aws-sdk/lib-dynamodb": "^3.95.0",

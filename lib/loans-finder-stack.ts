@@ -46,7 +46,7 @@ export class LoansFinderStack extends Stack {
       entities: ['loan', 'loan_variant', 'rate'],
       removalPolicy,
     });
-    new GlueDB(this, 'DB', {
+    const { database } = new GlueDB(this, 'DB', {
       bucket,
       rawObjectsPrefix,
     });
@@ -74,6 +74,9 @@ export class LoansFinderStack extends Stack {
     });
 
     new RESTAPILayer(this, 'Rest', {
+      glueDatabase: database,
+      bucket,
+      rawObjectsPrefix,
       table,
       logRetention,
     });

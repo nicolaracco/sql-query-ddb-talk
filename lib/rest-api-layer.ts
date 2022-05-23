@@ -2,10 +2,18 @@ import { Construct } from 'constructs';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as logs from 'aws-cdk-lib/aws-logs';
+import * as athena from 'aws-cdk-lib/aws-athena';
+import * as glue from '@aws-cdk/aws-glue-alpha';
+import * as s3 from 'aws-cdk-lib/aws-s3';
 import { DDBAccessorFunction } from './ddb-accessor-function';
 import { Stack } from 'aws-cdk-lib';
+import { QueryStartFunction } from './query-start-function';
+import { QueryShowFunction } from './query-show-function';
 
 export interface RESTAPILayerProps {
+  glueDatabase: glue.IDatabase;
+  bucket: s3.IBucket;
+  rawObjectsPrefix: string;
   table: dynamodb.ITable;
   logRetention: logs.RetentionDays;
 }
@@ -89,6 +97,41 @@ export class RESTAPILayer extends apigateway.RestApi {
       new DDBAccessorFunction(this, 'UpsertRate', {
         entry: 'lambda/rates/upsert.rest.handler.ts',
         table,
+        logRetention,
+      }).apigwIntegration(),
+    );
+
+    const workgroupName = `${Stack.of(this).stackName}Queries`;
+    const queriesPrefix = 'queries/';
+    new athena.CfnWorkGroup(this, 'QueryWorkgroup', {
+      name: workgroupName,
+      workGroupConfiguration: {
+        resultConfiguration: {
+          outputLocation: props.bucket.s3UrlForObject(queriesPrefix),
+        },
+      },
+      recursiveDeleteOption: true,
+    });
+
+    const queries = this.root.addResource('queries');
+    queries.addMethod(
+      'POST',
+      new QueryStartFunction(this, 'StartQuery', {
+        database: props.glueDatabase,
+        workgroupName,
+        resultsBucket: props.bucket,
+        rawObjectsPrefix: props.rawObjectsPrefix,
+        queryObjectsPrefix: queriesPrefix,
+        logRetention,
+      }).apigwIntegration(),
+    );
+    const query = queries.addResource('{id}');
+    query.addMethod(
+      'GET',
+      new QueryShowFunction(this, 'ShowQuery', {
+        workgroupName,
+        resultsBucket: props.bucket,
+        queryObjectsPrefix: queriesPrefix,
         logRetention,
       }).apigwIntegration(),
     );
