@@ -21,6 +21,7 @@
     "@typescript-eslint/eslint-plugin": "^5.23.0",
     "aws-cdk": "2.24.1",
     "axios": "^0.27.2",
+    "esbuild": "^0.14.39",
     "eslint": "^8.15.0",
     "eslint-config-prettier": "^8.5.0",
     "eslint-plugin-import": "^2.26.0",
@@ -31,8 +32,10 @@
     "typescript": "~3.9.7"
   },
   "dependencies": {
-    "@aws-sdk/client-dynamodb": "^3.87.0",
-    "@aws-sdk/lib-dynamodb": "^3.87.0",
+    "@aws-sdk/client-dynamodb": "^3.95.0",
+    "@aws-sdk/client-s3": "^3.95.0",
+    "@aws-sdk/lib-dynamodb": "^3.95.0",
+    "@aws-sdk/util-dynamodb": "^3.95.0",
     "ajv": "^8.11.0",
     "aws-cdk-lib": "2.24.1",
     "constructs": "^10.0.0",

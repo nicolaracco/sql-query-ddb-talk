@@ -5,6 +5,7 @@ import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import { DDBAccessorFunction } from './ddb-accessor-function';
 import { LambdaDDBEventSource } from './lambda-ddb-event-source';
+import { DDBToS3 } from './ddb-to-s3';
 import { RESTAPILayer } from './rest-api-layer';
 
 export class LoansFinderStack extends Stack {
@@ -36,6 +37,12 @@ export class LoansFinderStack extends Stack {
         name: 'GSI1SK',
         type: dynamodb.AttributeType.STRING,
       },
+    });
+
+    new DDBToS3(this, 'DDBToS3', {
+      table,
+      conversionLambdaEntry: 'lambda/ddb-to-s3/ddb-stream.handler.ts',
+      entities: ['loan', 'loan_variant', 'rate'],
     });
 
     const variantRemover = new DDBAccessorFunction(this, 'LoanVariantRemover', {
