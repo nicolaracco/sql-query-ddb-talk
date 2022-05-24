@@ -29,3 +29,7 @@ $ npx cdk deploy
 # After deploy is completed you can seed some test data
 $ npm run seed
 ```
+
+## REST APIs
+
+The demo projects deploys an API Gateway with a set of Rest APIs to test it. Import [rest-api.har](./rest-apis.har) in Insomnia or Postman to have a set of requests ready to be used. After the import you just need to replace the API endpoint with yours (CDK outputs the endpoint after the deploy completes).
