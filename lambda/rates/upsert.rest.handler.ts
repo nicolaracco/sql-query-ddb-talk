@@ -1,7 +1,6 @@
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, TransactWriteCommand } from '@aws-sdk/lib-dynamodb';
-import { ulid } from 'ulidx';
+import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
 import Ajv, { JSONSchemaType } from 'ajv';
 
 const TableName = process.env.TABLE_NAME!;
@@ -9,18 +8,16 @@ const client = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const ajv = new Ajv();
 
 interface RequestPayload {
-  name: string;
-  type: string;
-  rate: string;
+  code: string;
+  value: number;
 }
 const requestPayloadSchema: JSONSchemaType<RequestPayload> = {
   type: 'object',
   properties: {
-    name: { type: 'string' },
-    type: { type: 'string', enum: ['FIXED', 'VARIABLE'] },
-    rate: { type: 'string' },
+    code: { type: 'string' },
+    value: { type: 'number' },
   },
-  required: ['name', 'type', 'rate'],
+  required: ['code', 'value'],
   additionalProperties: false,
 };
 const requestPayloadValidate = ajv.compile(requestPayloadSchema);
@@ -39,43 +36,24 @@ function parsePayload(event: APIGatewayProxyEventV2): RequestPayload {
 export async function handler(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {
   try {
     const payload = parsePayload(event);
-    const id = ulid();
-    const fullId = `loan#${id}`;
-    const rateFullId = `rate#${payload.rate}`;
+    const fullId = `rate#${payload.code}`;
     await client.send(
-      new TransactWriteCommand({
-        TransactItems: [
-          {
-            ConditionCheck: {
-              TableName,
-              Key: {
-                PK: rateFullId,
-                SK: rateFullId,
-              },
-              ConditionExpression: 'attribute_exists(PK)',
-            },
-          },
-          {
-            Put: {
-              TableName,
-              Item: {
-                PK: fullId,
-                SK: fullId,
-                id,
-                ...payload,
-                _et: 'loan',
-                GSI1PK: 'loans',
-                GSI1SK: fullId,
-              },
-              ConditionExpression: 'attribute_not_exists(PK)',
-            },
-          },
-        ],
+      new PutCommand({
+        TableName,
+        Item: {
+          PK: fullId,
+          SK: fullId,
+          id: payload.code,
+          value: payload.value,
+          _et: 'rate',
+          GSI1PK: 'rates',
+          GSI1SK: fullId,
+        },
       }),
     );
     return {
       statusCode: 200,
-      body: JSON.stringify({ status: 'success', loan: { id, ...payload } }),
+      body: JSON.stringify({ status: 'success', rete: payload }),
     };
   } catch (e) {
     console.error(e);

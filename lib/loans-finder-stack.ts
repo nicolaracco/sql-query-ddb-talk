@@ -26,6 +26,17 @@ export class LoansFinderStack extends Stack {
       stream: dynamodb.StreamViewType.NEW_AND_OLD_IMAGES,
       removalPolicy,
     });
+    table.addGlobalSecondaryIndex({
+      indexName: 'GSI1',
+      partitionKey: {
+        name: 'GSI1PK',
+        type: dynamodb.AttributeType.STRING,
+      },
+      sortKey: {
+        name: 'GSI1SK',
+        type: dynamodb.AttributeType.STRING,
+      },
+    });
 
     const variantRemover = new DDBAccessorFunction(this, 'LoanVariantRemover', {
       entry: 'lambda/loan_variants/on-loan-delete.ddb-stream.handler.ts',

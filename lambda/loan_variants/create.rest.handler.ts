@@ -9,7 +9,7 @@ const client = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const ajv = new Ajv();
 
 interface RequestPayload {
-  ltvRatio: {
+  ltv: {
     min: number;
     max: number;
   };
@@ -22,7 +22,7 @@ interface RequestPayload {
 const requestPayloadSchema: JSONSchemaType<RequestPayload> = {
   type: 'object',
   properties: {
-    ltvRatio: {
+    ltv: {
       type: 'object',
       properties: {
         min: { type: 'number', minimum: 0 },
@@ -40,7 +40,7 @@ const requestPayloadSchema: JSONSchemaType<RequestPayload> = {
     },
     spread: { type: 'number' },
   },
-  required: ['ltvRatio', 'duration', 'spread'],
+  required: ['ltv', 'duration', 'spread'],
   additionalProperties: false,
 };
 const requestPayloadValidate = ajv.compile(requestPayloadSchema);

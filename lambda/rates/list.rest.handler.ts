@@ -13,19 +13,18 @@ export async function handler(): Promise<APIGatewayProxyResultV2> {
         IndexName: 'GSI1',
         KeyConditionExpression: 'GSI1PK = :GSI1PK',
         ExpressionAttributeValues: {
-          ':GSI1PK': 'loans',
+          ':GSI1PK': 'rates',
         },
         Select: 'SPECIFIC_ATTRIBUTES',
-        ProjectionExpression: 'id, #name, #type, rate',
+        ProjectionExpression: 'id, #value',
         ExpressionAttributeNames: {
-          '#name': 'name',
-          '#type': 'type',
+          '#value': 'value',
         },
       }),
     );
     return {
       statusCode: 200,
-      body: JSON.stringify(response.Items!.map(({ id, name, type, rate }) => ({ id, name, type, rate }))),
+      body: JSON.stringify(response.Items!.map(({ id, value }) => ({ code: id, value }))),
     };
   } catch (e) {
     console.error(e);

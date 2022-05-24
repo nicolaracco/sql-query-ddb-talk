@@ -74,5 +74,23 @@ export class RESTAPILayer extends apigateway.RestApi {
         logRetention,
       }).apigwIntegration(),
     );
+
+    const apiRates = this.root.addResource('rates');
+    apiRates.addMethod(
+      'GET',
+      new DDBAccessorFunction(this, 'ListRates', {
+        entry: 'lambda/rates/list.rest.handler.ts',
+        table,
+        logRetention,
+      }).apigwIntegration(),
+    );
+    apiRates.addMethod(
+      'POST',
+      new DDBAccessorFunction(this, 'UpsertRate', {
+        entry: 'lambda/rates/upsert.rest.handler.ts',
+        table,
+        logRetention,
+      }).apigwIntegration(),
+    );
   }
 }

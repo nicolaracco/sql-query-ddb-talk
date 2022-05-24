@@ -1,6 +1,6 @@
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, QueryCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, QueryCommand, QueryCommandOutput } from '@aws-sdk/lib-dynamodb';
 
 const TableName = process.env.TABLE_NAME!;
 const client = DynamoDBDocumentClient.from(new DynamoDBClient({}));
@@ -8,9 +8,8 @@ const client = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 interface LoanRecord {
   id: string;
   name: string;
-  loanType: string;
-  rateCode: string;
-  rateValue: string;
+  type: string;
+  rate: string;
 }
 
 interface VariantRecord {
@@ -18,6 +17,19 @@ interface VariantRecord {
   ltvRatio: { min: number; max: number };
   duration: { min: number; max: number };
   spread: number;
+}
+
+function parseQueryResponse(response: QueryCommandOutput): { loan?: LoanRecord; variants: VariantRecord[] } {
+  let loan: LoanRecord | undefined;
+  const variants: VariantRecord[] = [];
+  for (const item of response.Items!) {
+    if (item._et === 'loan') {
+      loan = item as LoanRecord;
+    } else {
+      variants.push(item as VariantRecord);
+    }
+  }
+  return { loan, variants };
 }
 
 export async function handler(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {
@@ -32,25 +44,22 @@ export async function handler(event: APIGatewayProxyEventV2): Promise<APIGateway
         },
       }),
     );
-    const { loan, variants } = response.Items!.reduce<{ loan?: LoanRecord; variants: VariantRecord[] }>(
-      (memo, item) => {
-        if (item._et === 'loan') {
-          memo.loan = item as LoanRecord;
-        } else {
-          memo.variants.push(item as VariantRecord);
-        }
-        return memo;
-      },
-      { loan: undefined, variants: [] },
-    );
+    const { loan, variants } = parseQueryResponse(response);
+    if (!loan) {
+      return {
+        statusCode: 404,
+        body: JSON.stringify({
+          error: 'Loan not found',
+        }),
+      };
+    }
     return {
       statusCode: 200,
       body: JSON.stringify({
         id,
         name: loan!.name,
-        loanType: loan!.loanType,
-        rateCode: loan!.rateCode,
-        rateValue: loan!.rateValue,
+        type: loan!.type,
+        rate: loan!.rate,
         variants: variants.map(({ id, ltvRatio, duration, spread }) => ({ id, ltvRatio, duration, spread })),
       }),
     };
