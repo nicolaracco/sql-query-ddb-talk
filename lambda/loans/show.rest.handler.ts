@@ -1,4 +1,4 @@
-import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
+import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, QueryCommand, QueryCommandOutput } from '@aws-sdk/lib-dynamodb';
 
@@ -32,7 +32,7 @@ function parseQueryResponse(response: QueryCommandOutput): { loan?: LoanRecord; 
   return { loan, variants };
 }
 
-export async function handler(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {
+export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
   try {
     const id = event.pathParameters!.loanId!;
     const response = await client.send(

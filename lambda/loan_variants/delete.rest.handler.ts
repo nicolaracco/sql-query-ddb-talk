@@ -1,11 +1,11 @@
-import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
+import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DeleteCommand, DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 
 const TableName = process.env.TABLE_NAME!;
 const client = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 
-export async function handler(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {
+export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
   try {
     const loanId = event.pathParameters!.loanId!;
     const id = event.pathParameters!.variantId!;

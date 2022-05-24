@@ -1,4 +1,4 @@
-import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
+import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
 import Ajv, { JSONSchemaType } from 'ajv';
@@ -22,7 +22,7 @@ const requestPayloadSchema: JSONSchemaType<RequestPayload> = {
 };
 const requestPayloadValidate = ajv.compile(requestPayloadSchema);
 
-function parsePayload(event: APIGatewayProxyEventV2): RequestPayload {
+function parsePayload(event: APIGatewayProxyEvent): RequestPayload {
   const data = JSON.parse(event.isBase64Encoded ? Buffer.from(event.body!, 'base64').toString() : event.body!);
   const valid = requestPayloadValidate(data);
   if (valid) {
@@ -33,7 +33,7 @@ function parsePayload(event: APIGatewayProxyEventV2): RequestPayload {
   }
 }
 
-export async function handler(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {
+export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
   try {
     const payload = parsePayload(event);
     const fullId = `rate#${payload.code}`;

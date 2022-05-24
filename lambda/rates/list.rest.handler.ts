@@ -1,11 +1,11 @@
-import { APIGatewayProxyResultV2 } from 'aws-lambda';
+import { APIGatewayProxyResult } from 'aws-lambda';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, QueryCommand } from '@aws-sdk/lib-dynamodb';
 
 const TableName = process.env.TABLE_NAME!;
 const client = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 
-export async function handler(): Promise<APIGatewayProxyResultV2> {
+export async function handler(): Promise<APIGatewayProxyResult> {
   try {
     const response = await client.send(
       new QueryCommand({
