@@ -69,6 +69,7 @@ export class LoansFinderStack extends Stack {
           glueTable: glueDB.loansTable,
           rawObjectsPrefix: `${rawObjectsPrefix}loan/`,
           refinedTableName: 'refined_loans',
+          partitionColumns: ['type'],
         },
         loanVariants: {
           glueTable: glueDB.loanVariantsTable,

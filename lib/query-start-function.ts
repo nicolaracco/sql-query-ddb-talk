@@ -39,7 +39,7 @@ export class QueryStartFunction extends lambdaNode.NodejsFunction {
     );
     this.addToRolePolicy(
       new iam.PolicyStatement({
-        actions: ['glue:GetTable'],
+        actions: ['glue:GetTable', 'glue:GetPartition'],
         resources: [
           props.database.catalogArn,
           props.database.databaseArn,

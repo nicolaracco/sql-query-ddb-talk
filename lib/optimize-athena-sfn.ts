@@ -13,6 +13,8 @@ export interface StepFunctionProps {
   removalPolicy: RemovalPolicy;
   bucket: s3.IBucket;
   database: glue.IDatabase;
+  rawGlueTable: glue.Table;
+  partitionColumns?: string[];
   ddbTable: ddb.ITable;
   refinedTableName: string;
   workgroupName: string;
@@ -37,11 +39,15 @@ export class OptimizeAthenaSfn extends Construct {
     });
     props.ddbTable.grantWriteData(refinedTableNameGenerator);
 
+    let createString = `CREATE TABLE "{}" WITH (format = 'Parquet') AS SELECT * FROM "${props.rawGlueTable.tableName}"`;
+    if (props.partitionColumns && props.partitionColumns.length > 0) {
+      const nonPartitionedColumnNames = props.rawGlueTable.columns.map(c => c.name).filter(c => !props.partitionColumns!.includes(c));
+      const partitionBy = props.partitionColumns.map(c => `'${c}'`).join(', ');
+      const selectFields = nonPartitionedColumnNames.concat(props.partitionColumns).join(', ');
+      createString = `CREATE TABLE "{}" WITH (format = 'Parquet', partitioned_by = ARRAY[${partitionBy}]) AS SELECT ${selectFields} FROM "${props.rawGlueTable.tableName}"`;
+    }
     const createNewTableJob = new tasks.AthenaStartQueryExecution(this, 'CreateRefinedTable', {
-      queryString: sfn.JsonPath.format(
-        `CREATE TABLE "{}" WITH (format = 'Parquet') AS SELECT * FROM "${props.rawGlueTable.tableName}"`,
-        sfn.JsonPath.stringAt('$.newTableName'),
-      ),
+      queryString: sfn.JsonPath.format(createString, sfn.JsonPath.stringAt('$.newTableName')),
       queryExecutionContext: {
         databaseName: props.database.databaseName,
       },

@@ -14,9 +14,10 @@ export interface OptimizeAthenaProps {
   refinedObjectsPrefix: string;
   tables: {
     [key: string]: {
-      glueTable: glue.ITable;
+      glueTable: glue.Table;
       rawObjectsPrefix: string;
       refinedTableName: string;
+      partitionColumns?: string[];
     };
   };
 }
@@ -44,6 +45,7 @@ export class OptimizeAthena extends Construct {
         database: props.database,
         rawGlueTable: tableInfo.glueTable,
         refinedTableName: tableInfo.refinedTableName,
+        partitionColumns: tableInfo.partitionColumns,
         ddbTable: props.ddbTable,
         removalPolicy,
         workgroupName,
