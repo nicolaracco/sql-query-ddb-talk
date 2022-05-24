@@ -15,6 +15,7 @@ export interface RESTAPILayerProps {
   bucket: s3.IBucket;
   dataObjectsPrefix: string;
   ddbTable: dynamodb.ITable;
+  athenaProductsTableName: string;
   logRetention: logs.RetentionDays;
 }
 
@@ -122,6 +123,7 @@ export class RESTAPILayer extends apigateway.RestApi {
         resultsBucket: props.bucket,
         dataObjectsPrefix: props.dataObjectsPrefix,
         queryObjectsPrefix: queriesPrefix,
+        athenaProductsTableName: props.athenaProductsTableName,
         logRetention,
       }).apigwIntegration(),
     );

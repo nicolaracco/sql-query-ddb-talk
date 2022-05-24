@@ -1,23 +1,22 @@
 import { Construct } from 'constructs';
-import * as glue from '@aws-cdk/aws-glue-alpha';
-import { Duration } from 'aws-cdk-lib';
+import { Duration, Stack } from 'aws-cdk-lib';
 import { RemovalPolicy } from 'aws-cdk-lib';
+import * as athena from 'aws-cdk-lib/aws-athena';
 import * as ddb from 'aws-cdk-lib/aws-dynamodb';
 import * as lambdaNode from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
 import * as tasks from 'aws-cdk-lib/aws-stepfunctions-tasks';
 import { S3ToSfnConnector } from './s3-to-sfn-connector';
+import { GlueDB } from './glue-db';
 
 export interface StepFunctionProps {
   removalPolicy: RemovalPolicy;
   bucket: s3.IBucket;
-  database: glue.IDatabase;
-  rawGlueTable: glue.Table;
-  partitionColumns?: string[];
+  glueDb: GlueDB;
   ddbTable: ddb.ITable;
+  refinedObjectsPrefix: string;
   refinedTableName: string;
-  workgroupName: string;
 }
 
 export interface S3ConnectorProps {
@@ -29,29 +28,45 @@ export class OptimizeAthenaSfn extends Construct {
   constructor(scope: Construct, id: string, props: StepFunctionProps) {
     super(scope, id);
 
+    const {
+      loansTable: rawLoansTable,
+      loanVariantsTable: rawLoanVariantsTable,
+      ratesTable: rawRatesTable,
+      database,
+    } = props.glueDb;
+
+    const workgroupName = `${Stack.of(this)}Aggregation`;
+    new athena.CfnWorkGroup(this, 'Workgroup', {
+      name: workgroupName,
+      workGroupConfiguration: {
+        resultConfiguration: {
+          outputLocation: props.bucket.s3UrlForObject(props.refinedObjectsPrefix),
+        },
+      },
+      recursiveDeleteOption: true,
+    });
+
     const refinedTableNameGenerator = new lambdaNode.NodejsFunction(this, 'RefinedTableNameGenerator', {
       entry: 'lambda/optimize-athena/table-name-generator.handler.ts',
       environment: {
         TABLE_NAME: props.ddbTable.tableName,
-        RAW_TABLE_NAME: props.rawGlueTable.tableName,
+        GLUE_TABLE_CODE: props.refinedTableName,
         REFINED_TABLE_NAME_PREFIX: `${props.refinedTableName}_`,
       },
     });
     props.ddbTable.grantWriteData(refinedTableNameGenerator);
 
-    let createString = `CREATE TABLE "{}" WITH (format = 'Parquet') AS SELECT * FROM "${props.rawGlueTable.tableName}"`;
-    if (props.partitionColumns && props.partitionColumns.length > 0) {
-      const nonPartitionedColumnNames = props.rawGlueTable.columns.map(c => c.name).filter(c => !props.partitionColumns!.includes(c));
-      const partitionBy = props.partitionColumns.map(c => `'${c}'`).join(', ');
-      const selectFields = nonPartitionedColumnNames.concat(props.partitionColumns).join(', ');
-      createString = `CREATE TABLE "{}" WITH (format = 'Parquet', partitioned_by = ARRAY[${partitionBy}]) AS SELECT ${selectFields} FROM "${props.rawGlueTable.tableName}"`;
-    }
+    const createString =
+      `CREATE TABLE "{}" WITH (format = 'Parquet', partitioned_by = ARRAY['type']) AS ` +
+      `SELECT l.id, l.name, lv.id AS variant_id, lv.duration, lv.ltv, ROUND(r.value + lv.spread, 2) AS rate, l.type FROM "${rawLoansTable.tableName}" l ` +
+      `INNER JOIN "${rawLoanVariantsTable.tableName}" lv ON l.id = lv.loanId ` +
+      `INNER JOIN "${rawRatesTable.tableName}" r ON l.rate = r.id`;
     const createNewTableJob = new tasks.AthenaStartQueryExecution(this, 'CreateRefinedTable', {
       queryString: sfn.JsonPath.format(createString, sfn.JsonPath.stringAt('$.newTableName')),
       queryExecutionContext: {
-        databaseName: props.database.databaseName,
+        databaseName: database.databaseName,
       },
-      workGroup: props.workgroupName,
+      workGroup: workgroupName,
       resultPath: sfn.JsonPath.DISCARD,
       integrationPattern: sfn.IntegrationPattern.RUN_JOB,
     });
@@ -62,9 +77,9 @@ export class OptimizeAthenaSfn extends Construct {
         sfn.JsonPath.stringAt('$.newTableName'),
       ),
       queryExecutionContext: {
-        databaseName: props.database.databaseName,
+        databaseName: database.databaseName,
       },
-      workGroup: props.workgroupName,
+      workGroup: workgroupName,
       resultPath: sfn.JsonPath.DISCARD,
       integrationPattern: sfn.IntegrationPattern.RUN_JOB,
     });
@@ -72,9 +87,9 @@ export class OptimizeAthenaSfn extends Construct {
     const dropOldTableJob = new tasks.AthenaStartQueryExecution(this, 'DropOldRefinedTable', {
       queryString: sfn.JsonPath.format('DROP TABLE IF EXISTS `{}`', sfn.JsonPath.stringAt('$.oldTableName')),
       queryExecutionContext: {
-        databaseName: props.database.databaseName,
+        databaseName: database.databaseName,
       },
-      workGroup: props.workgroupName,
+      workGroup: workgroupName,
       integrationPattern: sfn.IntegrationPattern.RUN_JOB,
       resultPath: sfn.JsonPath.DISCARD,
     });

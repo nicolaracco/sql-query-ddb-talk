@@ -14,6 +14,7 @@ export interface QueryStartFunctionProps {
   resultsBucket: s3.IBucket;
   dataObjectsPrefix: string;
   queryObjectsPrefix: string;
+  athenaProductsTableName: string;
   logRetention?: logs.RetentionDays;
 }
 
@@ -55,16 +56,11 @@ export class QueryStartFunction extends lambdaNode.NodejsFunction {
     const preparedStatementName = scope.node.addr;
     new athena.CfnPreparedStatement(this, 'PreparedStatement', {
       queryStatement: `
-      SELECT l.name, ROUND(r.value + lv.spread, 2) AS rate FROM refined_loans l
-      INNER JOIN (
-        SELECT loanId, MIN(lv.spread) AS spread FROM refined_loan_variants lv
-          WHERE lv.duration.min <= ? AND lv.duration.max >= ?
-            AND lv.ltv.min <= ? AND lv.ltv.max >= ?
-          GROUP BY lv.loanId
-      ) AS lv ON l.id = lv.loanId
-      INNER JOIN refined_rates r ON l.rate = r.id
-      WHERE l.type = ?
-      `,
+      SELECT p.id, p.name, MIN(p.rate) AS rate FROM "${props.athenaProductsTableName}" p
+        WHERE p.duration.min <= ? AND p.duration.max >= ?
+          AND p.ltv.min <= ? AND p.ltv.max >= ?
+          AND p.type = ?
+      GROUP BY p.id, p.name`,
       statementName: preparedStatementName,
       workGroup: props.workgroupName,
     });

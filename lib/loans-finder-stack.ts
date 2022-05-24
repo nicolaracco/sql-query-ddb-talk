@@ -8,7 +8,7 @@ import { LambdaDDBEventSource } from './lambda-ddb-event-source';
 import { DDBToS3 } from './ddb-to-s3';
 import { RESTAPILayer } from './rest-api-layer';
 import { GlueDB } from './glue-db';
-import { OptimizeAthena } from './optimize-athena';
+import { OptimizeAthenaSfn } from './optimize-athena-sfn';
 
 export class LoansFinderStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
@@ -53,30 +53,13 @@ export class LoansFinderStack extends Stack {
     });
 
     const refinedObjectsPrefix = 'refined/';
-    new OptimizeAthena(this, 'OptimizeAthena', {
+    new OptimizeAthenaSfn(this, 'OptimizeAthena', {
       bucket,
-      database: glueDB.database,
+      glueDb: glueDB,
       refinedObjectsPrefix,
       removalPolicy,
       ddbTable: table,
-      tables: {
-        rates: {
-          glueTable: glueDB.ratesTable,
-          rawObjectsPrefix: `${rawObjectsPrefix}rate/`,
-          refinedTableName: 'refined_rates',
-        },
-        loans: {
-          glueTable: glueDB.loansTable,
-          rawObjectsPrefix: `${rawObjectsPrefix}loan/`,
-          refinedTableName: 'refined_loans',
-          partitionColumns: ['type'],
-        },
-        loanVariants: {
-          glueTable: glueDB.loanVariantsTable,
-          rawObjectsPrefix: `${rawObjectsPrefix}loan_variant/`,
-          refinedTableName: 'refined_loan_variants',
-        },
-      },
+      refinedTableName: 'aggregated_products',
     });
 
     const variantRemover = new DDBAccessorFunction(this, 'LoanVariantRemover', {
@@ -106,6 +89,7 @@ export class LoansFinderStack extends Stack {
       bucket,
       dataObjectsPrefix: refinedObjectsPrefix,
       ddbTable: table,
+      athenaProductsTableName: 'aggregated_products',
       logRetention,
     });
   }
